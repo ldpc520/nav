@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>导航站管理后台</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f6f7f9;color:#1f2328;line-height:1.6;
+       font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:14px}
+
+  /* ---------- 登录遮罩 ---------- */
+  #loginMask{position:fixed;inset:0;background:#f6f7f9;z-index:999;
+             display:flex;align-items:center;justify-content:center}
+  .login-box{background:#fff;border:1px solid #d8dee4;border-radius:12px;padding:32px 34px;width:380px;max-width:92vw}
+  .login-box h1{font-size:20px;margin:0 0 6px}
+  .login-box p.tip{color:#656d76;font-size:13px;margin:0 0 20px}
+  .login-box input{width:100%;padding:10px 12px;border:1px solid #d8dee4;border-radius:8px;margin-bottom:12px}
+  .login-box button{width:100%;padding:10px;background:#0969da;color:#fff;border:0;border-radius:8px;font-size:15px}
+  .login-box button:hover{background:#0860ca}
+  .err{color:#c1121f;font-size:13px;margin-top:10px;min-height:20px}
+
+  /* ---------- 顶栏 ---------- */
+  header{background:#fff;border-bottom:1px solid #d8dee4;padding:12px 20px;
+         display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0;font-weight:700}
+  .spacer{flex:1}
+  .btn{padding:7px 14px;border:1px solid #d8dee4;background:#fff;border-radius:8px;font-size:14px;color:#1f2328}
+  .btn:hover{background:#f3f4f6}
+  .btn.primary{background:#0969da;color:#fff;border-color:#0969da}
+  .btn.primary:hover{background:#0860ca}
+  .btn.danger{color:#c1121f;border-color:#f0b8bc}
+  .btn.danger:hover{background:#fdf0f1}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .dot{font-size:12px;color:#656d76}
+  .dot.saved{color:#1a7f37}
+  .dot.unsaved{color:#9a6700;font-weight:600}
+
+  /* ---------- 主体布局 ---------- */
+  .wrap{max-width:1240px;margin:0 auto;padding:20px;display:grid;grid-template-columns:300px 1fr;gap:18px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid #d8dee4;border-radius:10px;padding:16px 18px;margin-bottom:14px}
+  .card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .card h2 .cnt{color:#656d76;font-weight:400;font-size:13px}
+
+  /* ---------- 分类列表 ---------- */
+  .cat-item{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;cursor:pointer}
+  .cat-item:hover{background:#f3f4f6}
+  .cat-item.active{background:#e7f0fe;color:#0969da;font-weight:600}
+  .cat-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+  .cat-item .n{color:#656d76;font-size:12px}
+  .mini{border:0;background:transparent;padding:2px 5px;border-radius:5px;font-size:13px;color:#656d76}
+  .mini:hover{background:#e3e8ee;color:#1f2328}
+  .mini.del:hover{background:#fde8ea;color:#c1121f}
+
+  /* ---------- 条目表 ---------- */
+  table.items{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.items th{text-align:left;background:#f6f8fa;padding:8px 8px;border-bottom:1px solid #d8dee4;
+                 color:#656d76;font-weight:600;font-size:12.5px}
+  table.items td{padding:8px;border-bottom:1px solid #eef1f4;vertical-align:middle}
+  table.items input{width:100%;padding:5px 8px;border:1px solid #e3e8ee;border-radius:6px}
+  table.items input:focus{outline:0;border-color:#0969da}
+  .icoprev{width:30px;height:30px;flex:none;object-fit:contain;border:1px solid #eef1f4;border-radius:6px;background:#fafbfc}
+  .icoCell{display:flex;align-items:center;gap:8px}
+  .icoFld{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
+  .icoFld input{flex:1;min-width:0}
+  .mini.upbtn{flex:none;height:26px;line-height:1;padding:0 10px;font-size:12px;border:1px solid #b6d3f5;
+              background:#eaf3fe;color:#0a5bb4;border-radius:6px;cursor:pointer;white-space:nowrap}
+  .mini.upbtn:hover{background:#ddf4ff;border-color:#0969da;color:#0969da}
+  .rowAct{display:flex;gap:2px;white-space:nowrap}
+
+  .addrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed #d8dee4}
+  .addrow input{padding:6px 10px;border:1px solid #d8dee4;border-radius:6px;flex:1;min-width:130px}
+
+  /* ---------- 主题 ---------- */
+  .theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .theme-grid label{display:block;font-size:13px;color:#656d76;margin-bottom:4px}
+  .theme-grid input[type=color]{width:100%;height:38px;border:1px solid #d8dee4;border-radius:6px;padding:2px}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .preset{border:1px solid #d8dee4;border-radius:8px;padding:6px 12px;font-size:13px;background:#fff}
+  .preset:hover{background:#f3f4f6}
+
+  .hint{background:#fff8e5;border:1px solid #f0d98c;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+  .hint.ok{background:#eaf5ec;border-color:#b7e0c2}
+  .hidden{display:none!important}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1f2328;color:#fff;
+         padding:10px 20px;border-radius:8px;font-size:14px;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none}
+  #toast.show{opacity:1}
+  .empty{color:#656d76;font-size:13.5px;padding:16px 0;text-align:center}
+  .empty.lead{text-align:left;line-height:1.9;padding:16px 18px;background:#fff8e6;
+              border:1px solid #f0d89a;border-radius:8px;color:#4a3c10}
+  /* ---- 大分类（分组）管理 ---- */
+  .grp-item{border:1px solid #e8eaed;border-radius:8px;padding:8px 10px;margin-bottom:8px}
+  .grp-row{display:flex;align-items:center;gap:6px}
+  .grp-row .nm{flex:1;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .grp-mem{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+  .chip{background:#f2f3f5;border-radius:999px;padding:2px 4px 2px 10px;font-size:12px;display:inline-flex;align-items:center;gap:2px}
+  .chip .mini{padding:0 6px;height:18px;line-height:18px;font-size:11px}
+  .dim{color:#9aa0a6;font-size:12.5px}
+  .grp-tag{font-size:11px;color:#8a6d3b;background:#fdf6e3;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+  .grp-item select{flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#fff}
+
+</style>
+</head>
+<body>
+
+<!-- ============ 登录 ============ -->
+<div id="loginMask">
+  <div class="login-box">
+    <h1>导航站管理后台</h1>
+    <p class="tip" id="loginTip">请输入管理密码</p>
+    <input type="password" id="pwd" placeholder="管理密码" autocomplete="current-password">
+    <button id="loginBtn">登 录</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ============ 顶栏 ============ -->
+<header class="hidden" id="topbar">
+  <h1>导航站管理后台</h1>
+  <span class="dot" id="status"></span>
+  <div class="spacer"></div>
+  <button class="btn" id="btnHome" title="在新标签打开前台首页">打开前台</button>
+  <button class="btn" id="btnImport">导入初始数据</button>
+  <button class="btn primary" id="btnSave">保存并发布</button>
+  <button class="btn" id="btnLogout">退出</button>
+</header>
+
+<div class="wrap hidden" id="main">
+
+  <!-- ============ 左：分类 ============ -->
+  <div>
+    <div class="card">
+      <h2>分类 <span class="cnt" id="catCnt"></span></h2>
+      <div id="catList"></div>
+      <div class="addrow">
+        <input id="newCatName" placeholder="新分类名称">
+        <button class="btn primary" id="btnAddCat">添加分类</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>大分类（侧边栏分组） <span class="cnt" id="grpCnt"></span></h2>
+      <div class="hint" style="margin:4px 0 10px">
+        大分类就是侧边栏里带箭头、能展开的那一级。小分类可以归进大分类；不归组的会直接显示在侧边栏顶级。
+        这里的大分类顺序 = 侧边栏顺序。
+      </div>
+      <div id="grpList"></div>
+      <div class="addrow">
+        <input id="newGrpName" placeholder="新大分类名称">
+        <button class="btn primary" id="btnAddGrp">添加大分类</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>主题配色</h2>
+      <div class="theme-grid">
+        <div><label>主色调</label><input type="color" id="thPrimary"></div>
+        <div><label>页面背景</label><input type="color" id="thBg"></div>
+        <div><label>卡片背景</label><input type="color" id="thCard"></div>
+        <div><label>文字颜色</label><input type="color" id="thText"></div>
+        <div><label>次要文字</label><input type="color" id="thMuted"></div>
+      </div>
+      <div class="presets">
+        <button class="preset" data-p="default">默认红</button>
+        <button class="preset" data-p="blue">清爽蓝</button>
+        <button class="preset" data-p="green">护眼绿</button>
+        <button class="preset" data-p="dark">夜间暗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 右：条目 ============ -->
+  <div>
+    <div id="notice"></div>
+    <div class="card">
+      <h2 id="curTitle">网站条目</h2>
+      <div id="itemBox"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ==========================================================
+ *  导航站管理后台
+ *  数据全部存在 Cloudflare KV 里，改动点「保存并发布」后前台立即生效
+ * ========================================================== */
+
+const $ = (id) => document.getElementById(id);
+let DATA = null;        // 全站数据
+let CUR = 0;            // 当前选中的分类下标
+let DIRTY = false;      // 是否有未保存的改动
+
+/* ---------- 小工具 ---------- */
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function markDirty(){
+  DIRTY=true;
+  $('status').textContent='● 有未保存的改动';
+  $('status').className='dot unsaved';
+}
+function markSaved(){
+  DIRTY=false;
+  $('status').textContent='● 已保存';
+  $('status').className='dot saved';
+}
+async function api(path, opts={}){
+  const res = await fetch(path, {
+    method: opts.method||'GET',
+    headers: opts.body?{'content-type':'application/json'}:{},
+    body: opts.body?JSON.stringify(opts.body):undefined,
+    credentials:'same-origin',
+  });
+  let j=null;
+  try{ j=await res.json(); }catch(e){ j={ok:false,error:'返回内容不是 JSON'}; }
+  if(res.status===401 || (j&&j.needLogin)){ showLogin('登录已过期，请重新登录'); throw new Error('needLogin'); }
+  if(!res.ok){ throw new Error((j&&j.error)||('请求失败 '+res.status)); }
+  return j;
+}
+
+/* ---------- 登录 ---------- */
+function showLogin(msg){
+  $('loginMask').classList.remove('hidden');
+  $('topbar').classList.add('hidden');
+  $('main').classList.add('hidden');
+  if(msg) $('loginErr').textContent=msg;
+}
+async function doLogin(){
+  const pwd=$('pwd').value;
+  if(!pwd){ $('loginErr').textContent='请输入密码'; return; }
+  $('loginErr').textContent='';
+  $('loginBtn').disabled=true; $('loginBtn').textContent='登录中…';
+  try{
+    await api('/api/login',{method:'POST',body:{password:pwd}});
+    $('loginMask').classList.add('hidden');
+    $('topbar').classList.remove('hidden');
+    $('main').classList.remove('hidden');
+    await load();
+  }catch(e){
+    $('loginErr').textContent=e.message||'登录失败';
+  }finally{
+    $('loginBtn').disabled=false; $('loginBtn').textContent='登 录';
+  }
+}
+$('loginBtn').onclick=doLogin;
+$('pwd').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+$('btnLogout').onclick=async()=>{
+  await fetch('/api/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});
+  showLogin('已退出登录');
+};
+$('btnHome').onclick=()=>window.open('/','_blank');
+
+/* ---------- 载入数据 ---------- */
+async function load(){
+  const j = await api('/api/data');
+   if(j.data && Array.isArray(j.data.categories)){
+     DATA = j.data;
+     // 旧数据没有 sidebar（大分类结构）→ 从 seed.json 借用，改完保存后就是自己的了
+     if(!Array.isArray(DATA.sidebar)){
+       try{
+         const sd=await fetch('/data/seed.json',{credentials:'same-origin'}).then(r=>r.json());
+         DATA.sidebar = Array.isArray(sd.sidebar) ? sd.sidebar : [];
+       }catch(e){ DATA.sidebar = []; }
+     }
+    render();
+    markSaved();
+    $('notice').innerHTML='';
+  }else{
+    // KV 里还没有数据 → 提示导入
+    DATA = {version:1, site:{title:''}, theme:defaultTheme(), categories:[], sidebar:[]};
+    render();
+    $('notice').innerHTML='<div class="hint">后台还没有存过数据。点右上角「导入初始数据」，把现有网站的 22 个分类读进来，之后再自己增删。</div>';
+  }
+}
+
+function defaultTheme(){
+  return {primary:'#f1404b',bg:'#f6f7f9',card:'#ffffff',text:'#1f2328',muted:'#656d76'};
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  renderCats();
+  renderGroups();
+  renderItems();
+  renderTheme();
+}
+
+/* ---------- 大分类（侧边栏分组）管理 ---------- */
+/* sidebar 结构：[{type:'item',cat:分类id,icon}, {type:'group',name,icon,cats:[分类id,...]}] */
+/* 历史数据里 cats 元素可能是 {id,label} 对象（旧版为了「侧边栏显示名≠分类名」留的），
+   统一用 refId() 取出分类 id，前后端才认得同一份数据。 */
+function refId(x){
+  if(x==null) return '';
+  return typeof x==='string' ? x : String(x.id||'');
+}
+function groups(){
+  if(!Array.isArray(DATA.sidebar)) DATA.sidebar=[];
+  return DATA.sidebar.filter(g=>g&&g.type==='group');
+}
+function grpMembers(g){
+  return (g.cats||[]).map(x=>DATA.categories.find(c=>c.id===refId(x))).filter(Boolean);
+}
+function ungroupedCats(){
+  const taken=new Set();
+  groups().forEach(g=>(g.cats||[]).forEach(x=>{ const id=refId(x); if(id) taken.add(id); }));
+  DATA.sidebar.forEach(g=>{ if(g&&g.type==='item'&&g.cat){ const id=refId(g.cat); if(id) taken.add(id); } });
+  return DATA.categories.filter(c=>!taken.has(c.id));
+}
+function catGroupOf(cid){
+  const g=groups().find(g=>(g.cats||[]).some(x=>refId(x)===cid));
+  return g?g.name:'';
+}
+function removeFromGroups(cid){
+  groups().forEach(g=>{ g.cats=(g.cats||[]).filter(x=>refId(x)!==cid); });
+}
+
+function renderGroups(){
+  const gs=groups();
+  $('grpCnt').textContent = gs.length + ' 个';
+  if(!gs.length){
+    $('grpList').innerHTML='<div class="empty">还没有大分类。小分类不归组时直接显示在侧边栏顶级。</div>';
+    return;
+  }
+  $('grpList').innerHTML = gs.map((g,gi)=>{
+    const mem=grpMembers(g);
+    const pool=ungroupedCats();
+    return `
+    <div class="grp-item">
+      <div class="grp-row">
+        <span class="nm" title="${esc(g.icon||'')}">${esc(g.name)}</span>
+        <span class="n">${mem.length} 个</span>
+        <button class="mini" data-ga="up" data-g="${gi}" title="上移（侧边栏顺序）">↑</button>
+        <button class="mini" data-ga="down" data-g="${gi}" title="下移（侧边栏顺序）">↓</button>
+        <button class="mini" data-ga="edit" data-g="${gi}" title="改名 / 改图标">改</button>
+        <button class="mini del" data-ga="del" data-g="${gi}" title="删除大分类（里面的分类会变成顶级）">×</button>
+      </div>
+      <div class="grp-mem">
+        ${mem.length
+          ? mem.map(c=>`<span class="chip">${esc(c.name)}<button class="mini del" data-ga="rm" data-g="${gi}" data-c="${esc(c.id)}" title="移出该组（变成顶级）">×</button></span>`).join('')
+          : '<span class="dim">暂无小分类，从下面选一个加进来</span>'}
+      </div>
+      ${pool.length ? `
+      <div class="addrow">
+        <select data-ga="pick" data-g="${gi}">
+          <option value="">把小分类加进「${esc(g.name)}」…</option>
+          ${pool.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}（${(c.items||[]).length} 个网站）</option>`).join('')}
+        </select>
+      </div>`:''}
+    </div>`;
+  }).join('');
+
+  $('grpList').querySelectorAll('button[data-ga]').forEach(b=>{
+    b.onclick=()=>{
+      const gi=+b.dataset.g, ga=b.dataset.ga, gs2=groups();
+      if(ga==='up'&&gi>0){ const t=gs2[gi-1]; gs2[gi-1]=gs2[gi]; gs2[gi]=t; markDirty(); }
+      else if(ga==='down'&&gi<gs2.length-1){ const t=gs2[gi+1]; gs2[gi+1]=gs2[gi]; gs2[gi]=t; markDirty(); }
+      else if(ga==='edit'){
+        const g=gs2[gi];
+        const nm=prompt('大分类名称：', g.name);
+        if(nm===null) return;
+        if(nm.trim()) g.name=nm.trim();
+        const ic=prompt('图标（Font Awesome 类名，如 fas fa-film；留空用默认文件夹图标）：', g.icon||'far fa-folder-open');
+        if(ic!==null) g.icon=ic.trim()||'far fa-folder-open';
+        markDirty();
+      }
+      else if(ga==='del'){
+        if(confirm('删除大分类「'+gs2[gi].name+'」？\n里面的分类不会被删，会变成顶级显示。')){
+          DATA.sidebar=DATA.sidebar.filter(x=>x!==gs2[gi]);
+          markDirty();
+        }
+      }
+      else if(ga==='rm'){
+        const g=gs2[gi];
+        g.cats=(g.cats||[]).filter(x=>refId(x)!==b.dataset.c);
+        markDirty();
+      }
+      render();
+    };
+  });
+  $('grpList').querySelectorAll('select[data-ga]').forEach(sel=>{
+    sel.onchange=()=>{
+      const gi=+sel.dataset.g, cid=sel.value;
+      if(!cid) return;
+      removeFromGroups(cid);                       // 一个分类只属于一个大分类
+      const g=groups()[gi];
+      g.cats=(g.cats||[]).concat([cid]);
+      markDirty(); render();
+    };
+  });
+}
+
+function renderCats(){
+  $('catCnt').textContent = DATA.categories.length + ' 个';
+  $('catList').innerHTML = DATA.categories.map((c,i)=>`
+    <div class="cat-item ${i===CUR?'active':''}" data-i="${i}">
+      <span class="nm">${esc(c.name)}</span>
+      ${catGroupOf(c.id)?`<span class="grp-tag">${esc(catGroupOf(c.id))}</span>`:''}
+      <span class="n">${(c.items||[]).length}</span>
+      <button class="mini" data-act="up" data-i="${i}" title="上移">↑</button>
+      <button class="mini" data-act="down" data-i="${i}" title="下移">↓</button>
+      <button class="mini" data-act="rename" data-i="${i}" title="重命名">改名</button>
+      <button class="mini del" data-act="del" data-i="${i}" title="删除">×</button>
+    </div>`).join('');
+  $('catList').querySelectorAll('.cat-item').forEach(el=>{
+    el.onclick=(e)=>{
+      if(e.target.dataset.act) return;
+      CUR=+el.dataset.i; render();
+    };
+  });
+  $('catList').querySelectorAll('button[data-act]').forEach(b=>{
+    b.onclick=(e)=>{
+      e.stopPropagation();
+      const i=+b.dataset.i, act=b.dataset.act;
+      if(act==='up'&&i>0){ swap(i,i-1); CUR=i-1; }
+      else if(act==='down'&&i<DATA.categories.length-1){ swap(i,i+1); CUR=i+1; }
+      else if(act==='rename'){
+        const v=prompt('分类名称：', DATA.categories[i].name);
+        if(v!==null&&v.trim()){ DATA.categories[i].name=v.trim(); markDirty(); }
+      }
+      else if(act==='del'){
+        if(confirm('确定删除分类「'+DATA.categories[i].name+'」及其下的所有网站？')){
+          const delId=DATA.categories[i].id;
+          DATA.categories.splice(i,1);
+          removeFromGroups(delId);   // 同步清理侧边栏分组里的引用
+          if(Array.isArray(DATA.sidebar)) DATA.sidebar=DATA.sidebar.filter(x=>!(x&&x.type==='item'&&x.cat===delId));
+          if(CUR>=DATA.categories.length) CUR=Math.max(0,DATA.categories.length-1);
+          markDirty();
+        }
+      }
+      render();
+    };
+  });
+}
+function swap(a,b){ const t=DATA.categories[a]; DATA.categories[a]=DATA.categories[b]; DATA.categories[b]=t; markDirty(); }
+
+function renderItems(){
+  const c = DATA.categories[CUR];
+  if(!c){
+    $('curTitle').textContent='网站条目';
+    $('itemBox').innerHTML='<div class="empty lead">'
+      +'<b>右边为什么是空的？</b><br>'
+      +'数据库里还没有内容。请先点右上角'
+      +'<button class="mini upbtn" onclick="document.getElementById(\'btnImport\').click()">导入初始数据</button>'
+      +'把现有的 22 个分类读进来，就能看到条目表格和上传按钮了。</div>';
+    return;
+  }
+  $('curTitle').innerHTML = '「'+esc(c.name)+'」的网站 <span class="cnt">'+((c.items||[]).length)+' 个</span>';
+  if(!c.items || !c.items.length){
+    $('itemBox').innerHTML='<div class="empty lead">'
+      +'这个分类下还没有网站。<br>用下方一排输入框添加：填「网站名称」和「网址」两项即可，'
+      +'图标可以先留空，也可以点「上传」从电脑选一张图。</div>';
+  }else{
+    $('itemBox').innerHTML=`
+      <table class="items">
+        <thead><tr>
+          <th style="width:260px">图标</th><th>网站名称</th><th>链接地址</th><th>一句话说明</th><th style="width:90px">操作</th>
+        </tr></thead>
+        <tbody>
+        ${c.items.map((it,i)=>`
+          <tr>
+            <td>
+              <div class="icoCell">
+                <img class="icoprev" src="${esc(it.icon||'assets/images/logos/default.webp')}" alt=""
+                     onerror="this.style.visibility='hidden'">
+                <div class="icoFld">
+                  <input value="${esc(it.icon||'')}" data-f="icon" data-i="${i}"
+                         placeholder="图标地址，或点右侧上传" title="图标地址，可留空">
+                  <button class="mini upbtn" data-act="upload" data-i="${i}"
+                          title="从这台电脑选一张图片上传">上传</button>
+                </div>
+              </div>
+            </td>
+            <td><input value="${esc(it.title)}" data-f="title" data-i="${i}"></td>
+            <td><input value="${esc(it.url)}" data-f="url" data-i="${i}"></td>
+            <td><input value="${esc(it.desc||'')}" data-f="desc" data-i="${i}"></td>
+            <td><div class="rowAct">
+              <button class="mini" data-act="up" data-i="${i}">↑</button>
+              <button class="mini" data-act="down" data-i="${i}">↓</button>
+              <button class="mini del" data-act="del" data-i="${i}">×</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    // 输入即改
+    $('itemBox').querySelectorAll('input[data-f]').forEach(inp=>{
+      inp.oninput=()=>{
+        const i=+inp.dataset.i, f=inp.dataset.f;
+        c.items[i][f]=inp.value;
+        markDirty();
+        if(f==='icon'){
+          const img=inp.parentElement.querySelector('img');
+          img.style.visibility='visible';
+          img.src=inp.value||'assets/images/logos/default.webp';
+        }
+      };
+    });
+    // 行操作
+    $('itemBox').querySelectorAll('button[data-act]').forEach(b=>{
+      b.onclick=()=>{
+        const i=+b.dataset.i, act=b.dataset.act;
+        if(act==='up'&&i>0){ const t=c.items[i]; c.items[i]=c.items[i-1]; c.items[i-1]=t; }
+        else if(act==='down'&&i<c.items.length-1){ const t=c.items[i]; c.items[i]=c.items[i+1]; c.items[i+1]=t; }
+        else if(act==='del'){ if(confirm('删除「'+c.items[i].title+'」？')) c.items.splice(i,1); }
+        else if(act==='upload'){ pickIcon(i); return; }
+        markDirty(); renderItems(); renderCats();
+      };
+    });
+  }
+
+  // 新增行
+  const add = document.createElement('div');
+  add.className='addrow';
+  add.innerHTML=`
+    <input id="nTitle" placeholder="网站名称，如：腾讯视频">
+    <input id="nUrl" placeholder="网址，如：https://v.qq.com">
+    <input id="nDesc" placeholder="一句话说明（可留空）">
+    <input id="nIcon" placeholder="图标地址（可留空，也可上传）">
+    <button class="mini upbtn" id="nUp" title="从这台电脑选一张图片上传">上传图标</button>
+    <button class="btn primary" id="nAdd">添加</button>`;
+  $('itemBox').appendChild(add);
+  $('nUp').onclick=()=>{
+    pickIconFile((url)=>{
+      $('nIcon').value=url;
+      toast('图标已上传，填好名称和网址后点「添加」');
+    });
+  };
+  $('nAdd').onclick=()=>{
+    const t=$('nTitle').value.trim(), u=$('nUrl').value.trim();
+    if(!t||!u){ toast('名称和网址都要填'); return; }
+    let url=u; if(!/^https?:\/\//i.test(url)) url='https://'+url;
+    c.items=c.items||[];
+    c.items.push({title:t,url:url,desc:$('nDesc').value.trim(),icon:$('nIcon').value.trim()});
+    markDirty(); render(); toast('已添加，记得点「保存并发布」');
+  };
+}
+
+/* ---------- 图标上传 ---------- */
+function pickIconFile(cb){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*';
+  inp.onchange=async()=>{
+    const f=inp.files && inp.files[0];
+    if(!f) return;
+    if(f.size>500*1024){ toast('图片超过 500KB，换张小一点的'); return; }
+    const reader=new FileReader();
+    reader.onload=async()=>{
+      try{
+        toast('上传中…');
+        const j=await api('/api/icon',{method:'POST',body:{type:f.type||'image/png',data:reader.result}});
+        cb(j.url);
+      }catch(e){ toast('上传失败：'+e.message); }
+    };
+    reader.readAsDataURL(f);
+  };
+  inp.click();
+}
+function pickIcon(i){
+  pickIconFile((url)=>{
+    DATA.categories[CUR].items[i].icon=url;
+    markDirty(); renderItems(); toast('图标已上传，记得点「保存并发布」');
+  });
+}
+
+/* ---------- 主题 ---------- */
+function renderTheme(){
+  const t = DATA.theme || (DATA.theme=defaultTheme());
+  $('thPrimary').value=t.primary; $('thBg').value=t.bg; $('thCard').value=t.card;
+  $('thText').value=t.text; $('thMuted').value=t.muted;
+}
+['primary','bg','card','text','muted'].forEach(k=>{
+  const el=$('th'+k.charAt(0).toUpperCase()+k.slice(1));
+  el.oninput=()=>{ DATA.theme=DATA.theme||defaultTheme(); DATA.theme[k]=el.value; markDirty(); };
+});
+const PRESETS={
+  default:{primary:'#f1404b',bg:'#f6f7f9',card:'#ffffff',text:'#1f2328',muted:'#656d76'},
+  blue:{primary:'#0969da',bg:'#f5f8fa',card:'#ffffff',text:'#1f2328',muted:'#5c6b7a'},
+  green:{primary:'#1a7f37',bg:'#f4f8f4',card:'#ffffff',text:'#1f2328',muted:'#5f6f63'},
+  dark:{primary:'#f1404b',bg:'#16181d',card:'#22252b',text:'#e6e8eb',muted:'#9aa2ad'},
+};
+document.querySelectorAll('.preset').forEach(b=>{
+  b.onclick=()=>{ DATA.theme={...PRESETS[b.dataset.p]}; markDirty(); renderTheme(); toast('已切换配色，保存后生效'); };
+});
+
+/* ---------- 分类增删 ---------- */
+$('btnAddCat').onclick=()=>{
+  const n=$('newCatName').value.trim();
+  if(!n){ toast('请输入分类名称'); return; }
+  DATA.categories.push({id:'cat'+Date.now().toString(36), name:n, icon:'far fa-star', items:[]});
+  CUR=DATA.categories.length-1;
+  $('newCatName').value='';
+  markDirty(); render(); toast('已添加分类');
+};
+
+/* ---------- 大分类增删 ---------- */
+$('btnAddGrp').onclick=()=>{
+  const n=$('newGrpName').value.trim();
+  if(!n){ toast('请输入大分类名称'); return; }
+  if(!Array.isArray(DATA.sidebar)) DATA.sidebar=[];
+  DATA.sidebar.push({type:'group', name:n, icon:'far fa-folder-open', cats:[]});
+  $('newGrpName').value='';
+  markDirty(); render(); toast('已添加大分类，记得把小分类加进去');
+};
+
+/* ---------- 导入初始数据 ---------- */
+$('btnImport').onclick=async()=>{
+  if(!confirm('导入会把当前后台里的数据替换成网站现有的 22 个分类。确定吗？')) return;
+  try{
+    const r=await fetch('/data/seed.json',{credentials:'same-origin'});
+    const seed=await r.json();
+    DATA=seed; CUR=0; render(); markDirty();
+    toast('已导入，点「保存并发布」生效');
+  }catch(e){ toast('导入失败：'+e.message); }
+};
+
+/* ---------- 保存 ---------- */
+$('btnSave').onclick=async()=>{
+  // 保护：还没导入过数据就保存，会把前台首页清空。先拦一道。
+  const n = (DATA && Array.isArray(DATA.categories)) ? DATA.categories.length : 0;
+  const m = DATA && Array.isArray(DATA.categories)
+    ? DATA.categories.reduce((s,c)=>s+((c&&Array.isArray(c.items))?c.items.length:0),0) : 0;
+  if (n === 0) {
+    if (!confirm('现在后台里一个分类都没有。\n\n直接保存会让前台首页变成空白页。\n\n建议先点右上角「导入初始数据」，把现有的 22 个分类读进来再保存。\n\n确定仍要保存空数据吗？')) {
+      toast('已取消保存');
+      return;
+    }
+  } else if (m === 0) {
+    if (!confirm(`有 ${n} 个分类，但里面一条网站都没有。\n\n保存后前台首页只会显示分类标题，没有网站卡片。\n\n确定要保存吗？`)) {
+      toast('已取消保存');
+      return;
+    }
+  }
+  const btn=$('btnSave'); btn.disabled=true; btn.textContent='保存中…';
+  try{
+    await api('/api/data',{method:'POST',body:{data:DATA}});
+    markSaved(); toast('已保存，前台刷新即可看到');
+  }catch(e){
+    toast('保存失败：'+e.message);
+  }finally{
+    btn.disabled=false; btn.textContent='保存并发布';
+  }
+};
+
+/* ---------- 离开提醒 ---------- */
+window.addEventListener('beforeunload',(e)=>{
+  if(DIRTY){ e.preventDefault(); e.returnValue=''; }
+});
+
+/* ---------- 启动：先看是否已登录 ---------- */
+(async function init(){
+  try{
+    const j=await api('/api/session');
+    if(j.authed){
+      $('loginMask').classList.add('hidden');
+      $('topbar').classList.remove('hidden');
+      $('main').classList.remove('hidden');
+      await load();
+    }else{
+      let tip='请输入管理密码';
+      if(!j.kv) tip='后台还没绑定 KV 存储，请先看部署说明';
+      else if(!j.configured) tip='后台还没设置密码，请先在 Pages 环境变量里添加 ADMIN_PASSWORD';
+      $('loginTip').textContent=tip;
+    }
+  }catch(e){
+    $('loginTip').textContent='无法连接后台接口，请确认已部署 _worker.js';
+  }
+})();
+</script>
+</body>
+</html>
